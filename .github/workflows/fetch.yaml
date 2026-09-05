@@ -51,34 +51,44 @@ jobs:
                   payload = json.loads(resp.read().decode("utf-8"))
 
               raw_rows = payload["rows"]
+              merges = payload.get("merges", [])
+              num_cols = len(raw_rows[0]) if raw_rows else 0
 
-              # Same two-row header merge as before, but pulled from the
-              # "value" field of each cell instead of raw CSV columns.
-              h1 = [cell["value"] for cell in raw_rows[0]]
-              h2 = [cell["value"] for cell in raw_rows[1]]
+              # Map every covered cell of a real merge to its anchor cell's coordinates
+              covered_by = {}
+              for m in merges:
+                  r0, c0, nr, nc = m["row"], m["col"], m["numRows"], m["numCols"]
+                  for rr in range(r0, r0 + nr):
+                      for cc in range(c0, c0 + nc):
+                          if (rr, cc) != (r0, c0):
+                              covered_by[(rr, cc)] = (r0, c0)
+
+              # Fill down/across merges in the body rows only, header rows are handled separately below
+              for r in range(2, len(raw_rows)):
+                  for c in range(num_cols):
+                      if (r, c) in covered_by:
+                          ar, ac = covered_by[(r, c)]
+                          raw_rows[r][c] = raw_rows[ar][ac]
+
+              # Build the flat header row. Each column's label is whichever of the two header rows' own cells actually has text
               columns = []
-              current_group = ""
-              for i, (col1, col2) in enumerate(zip(h1, h2)):
-                  col1 = (col1 or "").strip()
-                  col2 = (col2 or "").strip()
-                  if col1:
-                      current_group = col1
+              for i in range(num_cols):
                   if i == 0:
                       columns.append("Block")
                       continue
                   if i == 1:
                       columns.append("Boost")
                       continue
-                  if current_group and "fps" in current_group and col2:
-                      columns.append(f"{current_group} - {col2}")
-                  elif current_group and "fps" in current_group:
-                      columns.append(current_group)
+                  col1 = str(raw_rows[0][i]["value"] or "").strip()
+                  col2 = str(raw_rows[1][i]["value"] or "").strip()
+                  if col1 and col2:
+                      columns.append(f"{col1} - {col2}")
+                  elif col1:
+                      columns.append(col1)
                   elif col2:
                       columns.append(col2)
-                  elif current_group:
-                      columns.append(current_group)
                   else:
-                      columns.append(f"Col_{i}")
+                      columns.append("")
 
               body_rows = raw_rows[2:]
 
