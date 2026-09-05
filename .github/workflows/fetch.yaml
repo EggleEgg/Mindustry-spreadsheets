@@ -4,8 +4,8 @@ name: Fetch Google Sheet Data
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs daily at midnight UTC
-  workflow_dispatch:      # Allows manual trigger from GitHub
+    - cron: "0 0 * * *" # Runs daily at midnight UTC
+  workflow_dispatch: # Allows manual trigger from GitHub
 
 jobs:
   download-data:
@@ -14,6 +14,9 @@ jobs:
       contents: write
       pages: write
       id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout repository
@@ -22,7 +25,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Fetch and process sheet data
         env:
@@ -49,7 +52,8 @@ jobs:
 
               raw_rows = payload["rows"]
 
-              # Two-row header merge
+              # Same two-row header merge as before, but pulled from the
+              # "value" field of each cell instead of raw CSV columns.
               h1 = [cell["value"] for cell in raw_rows[0]]
               h2 = [cell["value"] for cell in raw_rows[1]]
               columns = []
@@ -96,7 +100,8 @@ jobs:
       - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: "."
 
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
