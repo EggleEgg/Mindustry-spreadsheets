@@ -23,19 +23,12 @@
       });
     }
 
-    function normalizeBg(bg) {
-      if (!bg) return 'transparent';
-      const v = bg.trim().toLowerCase();
-      if (v === '#ffffff' || v === '#fff' || v === 'white') return 'transparent';
-      return bg;
-    }
-
     function cellHtml(cell) {
       if (!cell) return '';
       if (cell.image) {
         return '<img src="' + cell.image + '" alt="" style="max-height:32px;max-width:100px;object-fit:contain;">';
       }
-      const style = 'background-color:' + normalizeBg(cell.bg) + ';' +
+      const style = 'background-color:' + 'transparent' + ';' +
                     'color:' + (cell.color || 'inherit') + ';' +
                     'font-weight:' + (cell.bold ? 'bold' : 'normal') + ';' +
                     'font-style:' + (cell.italic ? 'italic' : 'normal') + ';' +
