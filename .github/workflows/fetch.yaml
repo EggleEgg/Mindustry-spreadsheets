@@ -1,4 +1,4 @@
-name: Fetch Google Spreadsheets
+name: Fetch Google Sheet Data
 
 # yaml-embedded-languages: python
 
@@ -24,67 +24,63 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Fetch and Process Spreadsheets
+      - name: Fetch and process sheet data
+        env:
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
         run: |
-          python3 -c '
+          python3 << 'EOF'
           import json
-          import csv
-          import urllib.request
           import os
+          import urllib.request
 
-          config_path = "sources.json"
-          if os.path.exists(config_path):
-              with open(config_path, "r", encoding="utf-8") as f:
-                  sources = json.load(f)
-          else:
-              sources = [{
-                  "name": "throughput_vX.csv",
-                  "url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbJ4xGVG4ZyWVi0vK_u67u0enFH5ckwUuEceEkxZEsFjt__AIA9Gn76sZXEqjFyt8eZMk68fEFWRTl/pub?output=csv&gid=1669293901"
-              }]
+          APPS_SCRIPT_URL = os.environ["APPS_SCRIPT_URL"]
+
+          with open("sources.json", "r", encoding="utf-8") as f:
+              sources = json.load(f)
 
           for source in sources:
               filename = source["name"]
-              url = source["url"]
-              if "gid" in source and "gid=" not in url:
-                  separator = "&" if "?" in url else "?"
-                  url = f"{url}{separator}gid={source[\"gid\"]}"
+              gid = source.get("gid", "")
+              url = f"{APPS_SCRIPT_URL}?gid={gid}"
 
-              print(f"Fetching {filename} from {url}")
-              urllib.request.urlretrieve(url, filename)
+              print(f"Fetching {filename} from Apps Script (gid={gid})")
+              with urllib.request.urlopen(url) as resp:
+                  payload = json.loads(resp.read().decode("utf-8"))
 
-              with open(filename, "r", encoding="utf-8") as f:
-                  rows = list(csv.reader(f))
-              if len(rows) >= 2:
-                  h1 = rows[0]
-                  h2 = rows[1]
-                  new_header = []
-                  current_group = ""
-                  for i, (col1, col2) in enumerate(zip(h1, h2)):
-                      if col1.strip():
-                          current_group = col1.strip()
-                      if i == 0:
-                          new_header.append("Block")
-                          continue
-                      if i == 1:
-                          new_header.append("Boost")
-                          continue
-                      sub = col2.strip()
-                      if current_group and "fps" in current_group and sub:
-                          new_header.append(f"{current_group} - {sub}")
-                      elif current_group and "fps" in current_group:
-                          new_header.append(current_group)
-                      elif sub:
-                          new_header.append(sub)
-                      elif current_group:
-                          new_header.append(current_group)
-                      else:
-                          new_header.append(f"Col_{i}")
-                  rows[0] = new_header
-                  rows.pop(1)
-              with open(filename, "w", newline="", encoding="utf-8") as f:
-                  writer = csv.writer(f)
-                  writer.writerows(rows)
-          '
+              raw_rows = payload["rows"]
+
+              # Two-row header merge
+              h1 = [cell["value"] for cell in raw_rows[0]]
+              h2 = [cell["value"] for cell in raw_rows[1]]
+              columns = []
+              current_group = ""
+              for i, (col1, col2) in enumerate(zip(h1, h2)):
+                  col1 = (col1 or "").strip()
+                  col2 = (col2 or "").strip()
+                  if col1:
+                      current_group = col1
+                  if i == 0:
+                      columns.append("Block")
+                      continue
+                  if i == 1:
+                      columns.append("Boost")
+                      continue
+                  if current_group and "fps" in current_group and col2:
+                      columns.append(f"{current_group} - {col2}")
+                  elif current_group and "fps" in current_group:
+                      columns.append(current_group)
+                  elif col2:
+                      columns.append(col2)
+                  elif current_group:
+                      columns.append(current_group)
+                  else:
+                      columns.append(f"Col_{i}")
+
+              body_rows = raw_rows[2:]
+
+              with open(filename, "w", encoding="utf-8") as f:
+                  json.dump({"columns": columns, "rows": body_rows}, f)
+          EOF
 
       - name: Commit and push changes
         run: |
