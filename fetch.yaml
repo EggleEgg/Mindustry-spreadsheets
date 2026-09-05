@@ -1,0 +1,30 @@
+name: Fetch google spreadsheet(s)
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight UTC
+  workflow_dispatch:      # Allows manual trigger from GitHub
+
+jobs:
+  download-data:
+    runs-on: ubuntu-latest
+    permissions:
+          contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download sheet as CSV
+        run: |
+          GID="1669293901" # Changes per spreadsheet tab
+          
+          curl -sL "https://docs.google.com/spreadsheets/u/0/d/e/2PACX-1vQbJ4xGVG4ZyWVi0vK_u67u0enFH5ckwUuEceEkxZEsFjt__AIA9Gn76sZXEqjFyt8eZMk68fEFWRTl/pubhtml#gid=${GID}" -o throughput_vX.csv
+
+      - name: Commit and push
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add throughput_vX.csv
+        git commit -m "auto: update throughput_vX data" || exit 0
+        git push
