@@ -19,7 +19,7 @@ jobs:
         run: |
           GID="1669293901" # Changes per spreadsheet tab
           
-          curl -sL "https://docs.google.com/spreadsheets/u/0/d/e/2PACX-1vQbJ4xGVG4ZyWVi0vK_u67u0enFH5ckwUuEceEkxZEsFjt__AIA9Gn76sZXEqjFyt8eZMk68fEFWRTl/pubhtml#gid=${GID}" -o throughput_vX.csv
+          curl -sL "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbJ4xGVG4ZyWVi0vK_u67u0enFH5ckwUuEceEkxZEsFjt__AIA9Gn76sZXEqjFyt8eZMk68fEFWRTl/pub?output=csv&gid=${GID}" -o throughput_vX.csv
 
       - name: Commit and push
         run: |
