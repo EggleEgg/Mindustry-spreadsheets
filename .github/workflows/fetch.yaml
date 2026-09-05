@@ -1,5 +1,7 @@
 name: Fetch google spreadsheet(s)
 
+# yaml-embedded-languages: python
+
 on:
   schedule:
     - cron: '0 0 * * *' # Runs daily at midnight UTC
@@ -15,11 +17,47 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download sheet as CSV
+      - name: Download sheet as CSV and process headers
         run: |
           GID="1669293901" # Changes per spreadsheet tab
           
           curl -sL "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbJ4xGVG4ZyWVi0vK_u67u0enFH5ckwUuEceEkxZEsFjt__AIA9Gn76sZXEqjFyt8eZMk68fEFWRTl/pub?output=csv&gid=${GID}" -o throughput_vX.csv
+          
+          python3 -c '
+          import csv
+          with open("throughput_vX.csv", "r", encoding="utf-8") as f:
+              rows = list(csv.reader(f))
+          if len(rows) >= 2:
+              h1 = rows[0]
+              h2 = rows[1]
+              new_header = []
+              current_group = ""
+              for i, (col1, col2) in enumerate(zip(h1, h2)):
+                  if col1.strip():
+                      current_group = col1.strip()
+                  if i == 0:
+                      new_header.append("Block")
+                      continue
+                  if i == 1:
+                      new_header.append("Boost")
+                      continue
+                  sub = col2.strip()
+                  if current_group and "fps" in current_group and sub:
+                      new_header.append(f"{current_group} - {sub}")
+                  elif current_group and "fps" in current_group:
+                      new_header.append(current_group)
+                  elif sub:
+                      new_header.append(sub)
+                  elif current_group:
+                      new_header.append(current_group)
+                  else:
+                      new_header.append(f"Col_{i}")
+              rows[0] = new_header
+              rows.pop(1)
+          with open("throughput_vX.csv", "w", newline="", encoding="utf-8") as f:
+              writer = csv.writer(f)
+              writer.writerows(rows)
+          '
 
       - name: Commit and push
         run: |
