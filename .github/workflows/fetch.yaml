@@ -29,6 +29,7 @@ jobs:
 
       - name: Fetch and process sheet data
         env:
+          # Google apps script. Raw url outputs json with necessary data such as styling and resources (images, etc)
           APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
         run: |
           python3 << 'EOF'
