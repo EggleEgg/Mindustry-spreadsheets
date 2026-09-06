@@ -49,7 +49,9 @@
 
         $('#csv-table').DataTable({
           data: rows,
-          columns: dtColumns
+          columns: dtColumns,
+          pageLength: -1,
+          lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
         });
       })
       .catch(err => console.error('Failed to load throughput_vX.json', err));
