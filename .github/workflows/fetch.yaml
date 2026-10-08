@@ -35,25 +35,40 @@ jobs:
           python3 << 'EOF'
           import json
           import os
+          import sys
           import urllib.request
 
-          APPS_SCRIPT_URL = os.environ["APPS_SCRIPT_URL"]
+          # Ensure stdout/stderr are flushed immediately for real-time logging in Actions
+          sys.stdout.reconfigure(line_buffering=True)
 
+          APPS_SCRIPT_URL = os.environ["APPS_SCRIPT_URL"]
+          print(f"DEBUG: APPS_SCRIPT_URL length: {len(APPS_SCRIPT_URL)}", flush=True)
+
+          print("DEBUG: Opening sources.json", flush=True)
           with open("sources.json", "r", encoding="utf-8") as f:
               sources = json.load(f)
+          print(f"DEBUG: Loaded {len(sources)} sources from sources.json", flush=True)
 
-          for source in sources:
+          for idx, source in enumerate(sources):
               filename = source["name"]
               gid = source.get("gid", "")
               url = f"{APPS_SCRIPT_URL}?gid={gid}"
 
-              print(f"Fetching {filename} from Apps Script (gid={gid})")
-              with urllib.request.urlopen(url) as resp:
-                  payload = json.loads(resp.read().decode("utf-8"))
+              print(f"[{idx+1}/{len(sources)}] Fetching {filename} from Apps Script (gid={gid})", flush=True)
+              try:
+                  with urllib.request.urlopen(url, timeout=60) as resp:
+                      print(f"[{idx+1}/{len(sources)}] Received response for {filename}, status: {resp.status}", flush=True)
+                      body_bytes = resp.read()
+                      print(f"[{idx+1}/{len(sources)}] Read {len(body_bytes)} bytes for {filename}", flush=True)
+                      payload = json.loads(body_bytes.decode("utf-8"))
+              except Exception as e:
+                  print(f"ERROR: Failed to fetch or parse {filename}: {e}", flush=True)
+                  raise
 
-              raw_rows = payload["rows"]
+              raw_rows = payload.get("rows", [])
               merges = payload.get("merges", [])
               num_cols = len(raw_rows[0]) if raw_rows else 0
+              print(f"[{idx+1}/{len(sources)}] Processing {filename}: {len(raw_rows)} rows, {num_cols} cols, {len(merges)} merges", flush=True)
 
               # Map every covered cell of a real merge to its anchor cell's coordinates
               covered_by = {}

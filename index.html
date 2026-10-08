@@ -1,14 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Throughput Measurements v158</title>
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
   <style>
-    #csv-table img { display: block; margin: 0 auto; }
-    #csv-table td { vertical-align: middle; }
+    #csv-table img {
+      display: block;
+      margin: 0 auto;
+    }
+
+    #csv-table td {
+      vertical-align: middle;
+    }
   </style>
 </head>
+
 <body>
   <h2>Throughput Measurements (v158)</h2>
   <table id="csv-table" class="display"></table>
@@ -29,10 +37,10 @@
         return '<img src="' + cell.image + '" alt="" style="max-height:32px;max-width:100px;object-fit:contain;">';
       }
       const style = 'background-color:' + 'transparent' + ';' +
-                    'color:' + (cell.color || 'inherit') + ';' +
-                    'font-weight:' + (cell.bold ? 'bold' : 'normal') + ';' +
-                    'font-style:' + (cell.italic ? 'italic' : 'normal') + ';' +
-                    'display:block;padding:2px 6px;';
+        'color:' + (cell.color || 'inherit') + ';' +
+        'font-weight:' + (cell.bold ? 'bold' : 'normal') + ';' +
+        'font-style:' + (cell.italic ? 'italic' : 'normal') + ';' +
+        'display:block;padding:2px 6px;';
       return '<span style="' + style + '">' + escapeHtml(cell.value) + '</span>';
     }
 
@@ -50,11 +58,12 @@
         $('#csv-table').DataTable({
           data: rows,
           columns: dtColumns,
-          pageLength: -1, 
+          pageLength: -1,
           lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
         });
       })
       .catch(err => console.error('Failed to load throughput_vX.json', err));
   </script>
 </body>
+
 </html>
